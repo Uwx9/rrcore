@@ -1,0 +1,31 @@
+0: 为什么写rrcore
+相比C，Rust可以帮助减少运行时错误，这一点很让我喜欢
+riscv架构虽然不太了解但感觉并不复杂。既然学习内核，多了解一些架构肯定是好的
+想要学习内核，操作系统，自然是多写最有用
+
+1: qumu启动命令和参数
+
+
+2: 剥离ELF文件元信息
+为了剥离ELF文件的元信息使用命令, 例如：rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/rrcore -O binary target/riscv64gc-unknown-none-elf/release/rrcore.bin
+这下应该只剩下按序排好的各个节
+
+3: 基于 GDB 验证启动流程
+首先启动内核
+qemu-system-riscv64 \
+    -machine virt \
+    -nographic \
+    -bios ../bootloader/rustsbi-qemu.bin \
+    -device loader,file=target/riscv64gc-unknown-none-elf/release/rrcore.bin,addr=0x80200000 \
+    -s -S
+注：-s 可以使 Qemu 监听本地 TCP 端口 1234 等待 GDB 客户端连接，
+而 -S 可以使 Qemu 在收到 GDB 的请求后再开始运行。因此，Qemu 暂时没有任何输出。
+注意，如果不想通过 GDB 对于 Qemu 进行调试而是直接运行 Qemu 的话，则要删掉最后一行的 -s -S 。
+
+打开另一个终端，启动一个 GDB 客户端连接到 Qemu
+riscv64-unknown-elf-gdb \
+    -ex 'file target/riscv64gc-unknown-none-elf/release/rrcore' \
+    -ex 'set arch riscv:rv64' \
+    -ex 'target remote localhost:1234'
+
+注：从0x1000到0x1014的指令是qumu的行为，它会跳转到0x80000000执行rustsbi代码，然后跳转到0x82000000执行内核代码

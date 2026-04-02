@@ -1,0 +1,1 @@
+/home/unique9/operating-system/rrcore/kernel/target/riscv64gc-unknown-none-elf/release/rrcore: /home/unique9/operating-system/rrcore/kernel/src/entry.asm /home/unique9/operating-system/rrcore/kernel/src/lang_item.rs /home/unique9/operating-system/rrcore/kernel/src/main.rs
