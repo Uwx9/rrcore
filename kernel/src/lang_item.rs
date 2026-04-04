@@ -1,3 +1,9 @@
+/**
+ *
+ * lang_items表示语言项,这是rust要求实现的 
+ *
+ */
+
 use core::panic::PanicInfo;
 use crate::sbi::shutdown;
 use crate::println;

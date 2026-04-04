@@ -1,2 +1,4 @@
 kernel/target/*
 kernel/Cargo.lock
+afterclass-exercises/*
+think.txt

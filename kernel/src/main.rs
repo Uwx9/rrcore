@@ -10,11 +10,15 @@ use core::arch::global_asm;
 
 global_asm!(include_str!("entry.asm"));
 
+// static mut LOVE: i32 = 32;
+
 #[unsafe(no_mangle)]    // 将 rust_main 标记为 #[no_mangle] 以免编译器对它的名字进行混淆
 fn rust_main() -> !
 {
     clear_bss();
     println!("hello, rrcore");
+    console::show_kernel_img();
+
     panic!("shutdowm machine...");
 }
 
