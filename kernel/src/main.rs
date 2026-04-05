@@ -16,7 +16,7 @@ global_asm!(include_str!("entry.asm"));
 fn rust_main() -> !
 {
     clear_bss();
-    println!("hello, rrcore");
+    println!("\nKernel Output");
     console::show_kernel_img();
 
     panic!("shutdowm machine...");
