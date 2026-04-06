@@ -1,4 +1,8 @@
-use core::fmt::{ Write, Result};
+//
+//  kernel/src/console.rs
+//
+
+use core::fmt::{ self, Write, Result};
 use crate::sbi::console_putchar;
 
 #[macro_export]
@@ -51,7 +55,7 @@ impl Write for Stdout {
     }
 }
 
-pub fn print(args: core::fmt::Arguments)
+pub fn print(args: fmt::Arguments)
 {
     Stdout.write_fmt(args).unwrap();
 }
