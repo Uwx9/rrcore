@@ -15,8 +15,9 @@ pub extern "C" fn _start() -> !
     panic!("unreachable after sys_exit");
 }
 
+/// 这里的weak main是为了让用户程序没有定义main时可以让编译通过
 #[no_mangle]
-#[linkage = "weak"]
+#[linkage = "weak"]     /* 这里的main是个弱符号 */
 fn main() -> i32
 {
     panic!("Cannot find main!");

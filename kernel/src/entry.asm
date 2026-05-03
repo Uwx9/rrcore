@@ -1,6 +1,7 @@
+// 设置栈指针并跳转到rustmain
     .section .text.entry
-    .global _start
-_start:
+    .global _start 
+_start:                    
     la sp, boot_stack_top    
     call rust_main
 

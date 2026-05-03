@@ -16,7 +16,7 @@ fn syscall(id: usize, args: [usize; 3]) -> isize
     unsafe {
         asm!(
             "ecall",
-            inlaterout("x10") args[0] => ret,
+            inlaterout("x10") args[0] => ret,   // 第一个参数写入x10, 这里还表示x10会将系统调用返回值写入ret
             in("x11") args[1],
             in("x12") args[2],
             in("x17") id,
@@ -39,7 +39,7 @@ pub fn sys_write(fd: usize, buffer: &[u8]) -> isize
 
 /// 功能：退出应用程序并将返回值告知批处理系统。
 /// 参数：`exit_code` 表示应用程序的返回值。
-/// 返回值：该系统调用不应该返回。
+/// 返回值：该系统调用返回退出码
 /// syscall ID：93
 pub fn sys_exit(xstate: u32) -> isize
 {
