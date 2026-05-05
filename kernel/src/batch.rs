@@ -2,10 +2,19 @@
  *
  *  kernel/src/batch.rs 
  *
+ *
  */
+
+
+use crate::println;
+use crate::trap::TrapContext;
+use crate::sync;
 
 const USER_STACK_SIZE: usize =  4096 * 2;
 const KERNEL_STACK_SIZE: usize =  4096 * 2;
+const APP_BASE_ADDR: usize = 0x80400000;
+const APP_SIZE_LIMIT: usize = 0x80500000;
+const MAX_APP_NUM: usize = 16;
 
 #[repr(align(4096))]
 struct UserStack {
@@ -29,13 +38,25 @@ impl KernelStack {
     {
         self.data.as_ptr() as usize + KERNEL_STACK_SIZE
     }
+
+    /// 该函数用于构造从内核到用户态所需的上下文
+    pub fn push_context(&self, cx: TrapContext) -> usize
+    {
+        let mut ksp = self.get_sp();
+        ksp -= core::mem::size_of::<TrapContext>();
+        let cx_ptr = ksp as *mut TrapContext;
+        unsafe {
+            core::ptr::write(cx_ptr, cx);
+        }
+        ksp
+    }
 }
 
-static USER_STACK = UserStack {data: [0; USER_STACK_SIZE]};
-static KERNEL_STACK = KernelStack {data: [0; USER_STACK_SIZE]};
+static USER_STACK: UserStack = UserStack {data: [0; USER_STACK_SIZE]};
+static KERNEL_STACK: KernelStack = KernelStack {data: [0; USER_STACK_SIZE]};
 
 
-static APP_MANAGER: UPSafeCell<Option<AppManager>> = UPsafeCell::new(None);
+static APP_MANAGER: sync::up::UPSafeCell<Option<AppManager>> = unsafe { sync::up::UPSafeCell::new(None) };
 
 struct AppManager {
     app_num: usize,
@@ -53,70 +74,101 @@ impl AppManager {
     pub fn print_app_info(&self)
     {
         let app_id = self.get_current_app();
-        let current_app_start = app_start[app_id];
-        let current_app_end = app_end[app_id];
-        println!("currnet_app_id: {app_id}");
-        println!("currnet_app_start: {current_app_start}");
-        println!("currnet_app_end: {current_app_end}");
+        let current_app_start = self.app_start[app_id];
+        let current_app_end = self.app_end[app_id];
+        println!("current_app_id: {}", app_id);
+        println!("current_app_start: {}", current_app_start);
+        println!("current_app_end: {}", current_app_end);
     }
 
-    unsafe pub fn load_app(&self, app_id: usize)
+    pub fn move_to_next_app(&mut self)
     {
-        if app_id >= self.app_num {
-            panic("All applications completed!");
+        self.current_app += 1;
+        if self.current_app >= self.app_num {
+            self.current_app = 0;
         }
+    }
 
-        println!("[kernel] load app_id: {app_id}");
+    pub unsafe fn load_app(&self, app_id: usize)
+    {
+        unsafe {
+            if app_id >= self.app_num {
+                panic!("All applications completed!");
+            }
 
-        // 清空app所需空间
-        core::slice::from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, APP_SIZE_LIMIT).fill(0);
+            println!("[kernel] load app_id: {}", app_id);
 
-        let app_src = from_raw_parts(self.app_start[app_id] as *const u8, app_end[app_id] - app_start[app_id]);
-        let app_dst = from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, app_sec.len());
-        app_dst.copy_from_slice(app_src);
+            // 清空app所需空间
+            core::slice::from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, APP_SIZE_LIMIT).fill(0);
 
-        // 在加载完应用程序后需要跳转过去执行, 为了确保取指正常需要下面这句
-        // 它的功能是保证 在它之后的取指过程必须能够看到在它之前的所有对于取指内存区域的修改
-        // 这里应该是保证能看见对APP_BASE_ADDR的修改, 因为即将去那里取指令
-        asm!("fence.i");
+            let app_src = core::slice::from_raw_parts(self.app_start[app_id] as *const u8, self.app_end[app_id] - self.app_start[app_id]);
+            let app_dst = core::slice::from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, app_src.len());
+            app_dst.copy_from_slice(app_src);
+
+            // 在加载完应用程序后需要跳转过去执行, 为了确保取指正常需要下面这句
+            // 它的功能是保证 在它之后的取指过程必须能够看到在它之前的所有对于取指内存区域的修改
+            // 这里应该是保证能看见对APP_BASE_ADDR的修改, 因为即将去那里取指令
+            core::arch::asm!("fence.i");
+        }
+        
     }
 }
 
 
 unsafe fn build_app_manager() -> AppManager
 {
-    extern "C" {fn _num_app();}
-    let num_app_ptr = _num_app as usize as *const usize;
-    let num_app = num_app_ptr.read_volatile();
+    unsafe extern "C" { fn _num_app(); }
 
-    let app_start: [usize; MAX_APP_NUM] = [0; MAX_APP_NUM];
-    let app_end: [usize; MAX_APP_NUM] = [0; MAX_APP_NUM];
+    unsafe {
+        let num_app_ptr = _num_app as *const() as usize as *const usize;
+        let num_app = num_app_ptr.read_volatile();
 
-    let app_start_raw: &[usize] = core::slice::from_raw_parts(num_app_ptr.add(1), num_app);
-    let app_end_raw: &[usize] = core::slice::from_raw_parts(num_app_ptr.add(1 + num_app), num_app);
+        let mut app_start: [usize; MAX_APP_NUM] = [0; MAX_APP_NUM];
+        let mut app_end: [usize; MAX_APP_NUM] = [0; MAX_APP_NUM];
 
-    app_start[..num_app].copy_from_slice(app_start_raw);
-    app_end[..num_app].copy_from_slice(app_end_raw);
+        let app_start_raw: &[usize] = core::slice::from_raw_parts(num_app_ptr.add(1), num_app);
+        let app_end_raw: &[usize] = core::slice::from_raw_parts(num_app_ptr.add(1 + num_app), num_app);
 
-    AppManager {
-        app_num: num_app,
-        current_app: 0,
-        app_start,
-        app_end,
+        app_start[..num_app].copy_from_slice(app_start_raw);
+        app_end[..num_app].copy_from_slice(app_end_raw);
+
+        AppManager {
+            app_num: num_app,
+            current_app: 0,
+            app_start,
+            app_end,
+        }
     }
+
 }
 
 /// 初始化全局变量APP_MANAGER
 pub fn init_app_manager()
 {
-    let cell = APP_MANAGER.exclusive_acess();
+    let mut cell = APP_MANAGER.exclusive_acess();
     if cell.is_none() {
         *cell = Some(unsafe {build_app_manager()});
     }
 }
 
-pub fn run_next_app()
+/// 每一次run_next_app都会重新在内核栈顶构造一个用户上下文并切换过去
+pub fn run_next_app() -> !
 {
-    
-}
+    let mut guard = APP_MANAGER.exclusive_acess();
+    let app_manager = guard.as_mut().unwrap();
+    // let mut app_manager = APP_MANAGER.exclusive_acess().as_mut().unwrap();
+    let current_app = app_manager.get_current_app();
+    unsafe {
+        app_manager.load_app(current_app);
+    }
+    app_manager.move_to_next_app();
+    drop(guard);
 
+    unsafe extern "C" {fn __restore(cx_addr: usize);}
+    
+    // 这里先构造内核栈上的用户上下文再退出, 退出后sp-> userstack, sscratch->kernelstack
+    unsafe {
+        __restore(KERNEL_STACK.push_context(TrapContext::app_init_context(APP_BASE_ADDR, USER_STACK.get_sp())));
+    }
+    panic!("Unreachable in batch::run_current_app!");
+}

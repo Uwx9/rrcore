@@ -1,6 +1,7 @@
 # os/src/trap/trap.S
 
 ### __alltraps
+.altmacro
 .macro SAVE_GP n
     sd x\n, \n*8(sp)
 .endm
@@ -34,7 +35,7 @@ __alltraps:
     sd t2, 2*8(sp)  // 最后保存用户栈地址, 此时就是sscratch
     # set input argument of trap_handler(cx: &mut TrapContext)
     mv a0, sp   # 这里a0相当于内核栈上的TropContext的起始地址
-    call trap_handler
+    call trap_handler   // 这里处理完了后栈上a0位置存的返回值, 实际a0寄存器依旧指向栈上TropContext
 
 
 ### __restore

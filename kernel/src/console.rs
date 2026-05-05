@@ -5,6 +5,7 @@
 use core::fmt::{ self, Write, Result};
 use crate::sbi::console_putchar;
 
+// 这个宏导出到 crate 根
 #[macro_export]
 macro_rules! print 
 {
