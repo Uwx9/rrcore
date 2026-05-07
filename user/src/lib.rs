@@ -19,7 +19,7 @@ mod lang_items;
 pub extern "C" fn _start() -> !
 {
     clear_bss();
-    exit(main());
+    exit(main());   // sys_exit 会run_next_app
     panic!("unreachable after sys_exit");
 }
 
