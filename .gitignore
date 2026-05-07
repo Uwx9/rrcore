@@ -4,3 +4,6 @@ afterclass-exercises/*
 think.txt
 user/target/*
 user/Cargo.lock
+
+user/target/*
+user/Cargo.lock

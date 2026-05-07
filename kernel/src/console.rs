@@ -1,6 +1,11 @@
-use core::fmt::{ Write, Result};
+//
+//  kernel/src/console.rs
+//
+
+use core::fmt::{ self, Write, Result};
 use crate::sbi::console_putchar;
 
+// 这个宏导出到 crate 根
 #[macro_export]
 macro_rules! print 
 {
@@ -21,14 +26,14 @@ macro_rules! println {
 #[macro_export]
 macro_rules! info {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[34m", "[INFO] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?))
+        $crate::console::print(format_args!(concat!("\x1b[34m", "[INFO]  ", $fmt, "\x1b[0m\n") $(, $($arg)+)?))
     }
 }
 
 #[macro_export]
 macro_rules! warn {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[93m", "[WARN] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?))
+        $crate::console::print(format_args!(concat!("\x1b[93m", "[WARN]  ", $fmt, "\x1b[0m\n") $(, $($arg)+)?))
     }
 }
 
@@ -51,7 +56,7 @@ impl Write for Stdout {
     }
 }
 
-pub fn print(args: core::fmt::Arguments)
+pub fn print(args: fmt::Arguments)
 {
     Stdout.write_fmt(args).unwrap();
 }
