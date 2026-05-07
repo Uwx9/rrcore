@@ -13,7 +13,7 @@ use crate::sync;
 const USER_STACK_SIZE: usize =  4096 * 2;
 const KERNEL_STACK_SIZE: usize =  4096 * 2;
 const APP_BASE_ADDR: usize = 0x80400000;
-const APP_SIZE_LIMIT: usize = 0x80500000;
+const APP_SIZE_LIMIT: usize = 0x100000;
 const MAX_APP_NUM: usize = 16;
 
 #[repr(align(4096))]
@@ -100,6 +100,7 @@ impl AppManager {
 
             // 清空app所需空间
             core::slice::from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, APP_SIZE_LIMIT).fill(0);
+            println!("[kernel] clear app space from {:#x} to {:#x}", APP_BASE_ADDR, APP_BASE_ADDR + APP_SIZE_LIMIT);
 
             let app_src = core::slice::from_raw_parts(self.app_start[app_id] as *const u8, self.app_end[app_id] - self.app_start[app_id]);
             let app_dst = core::slice::from_raw_parts_mut(APP_BASE_ADDR as usize as *mut u8, app_src.len());
@@ -109,6 +110,7 @@ impl AppManager {
             // 它的功能是保证 在它之后的取指过程必须能够看到在它之前的所有对于取指内存区域的修改
             // 这里应该是保证能看见对APP_BASE_ADDR的修改, 因为即将去那里取指令
             core::arch::asm!("fence.i");
+            println!("[kernel] load app_id: {} finished!", app_id);
         }
         
     }
@@ -161,6 +163,8 @@ pub fn run_next_app() -> !
     unsafe {
         app_manager.load_app(current_app);
     }
+    println!("[kernel] load_app: {} ok!", current_app);
+    app_manager.print_app_info();
     app_manager.move_to_next_app();
     drop(guard);
 

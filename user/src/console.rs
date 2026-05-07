@@ -23,12 +23,11 @@ macro_rules! println {
     }
 }
 
-
-
+use crate::write;
 struct Stdout;
 
 impl Write for Stdout {
-    fn write_str(&mut self, s: &str) -> fmt::Result
+    fn write_str(&mut self, s: &str) -> core::fmt::Result
     {
         write(STDOUT, s.as_bytes());    // 这里的write应该是用户库最终调用sys_write的封装, 就像C标准库
         Ok(())

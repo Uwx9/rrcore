@@ -16,9 +16,9 @@ core::arch::global_asm!(include_str!("trap.S"));
 /// 这里目前只设置stvec
 pub fn init_sys()
 {
-    unsafe extern "C" {fn __all_traps();}
+    unsafe extern "C" {fn __alltraps();}
     unsafe {
-        stvec::write(__all_traps as *const() as usize, TrapMode::Direct);
+        stvec::write(__alltraps as *const() as usize, TrapMode::Direct);
     }
 }
 
