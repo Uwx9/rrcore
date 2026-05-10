@@ -13,6 +13,11 @@ mod syscall;
 mod lang_items;
 
 
+const SYSCALL_WRITE: usize = 64;
+const SYSCALL_EXIT: usize = 93;
+const SYSCALL_GET_TASKINFO: usize = 94;
+use syscall::syscall;
+
 /// 用户入口函数，负责调用用户定义的main函数，并在main函数返回后调用exit系统调用退出程序。
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".text.entry")]
@@ -45,11 +50,6 @@ fn clear_bss()
 }
 
 
-
-const SYSCALL_WRITE: usize = 64;
-const SYSCALL_EXIT: usize = 93;
-use syscall::syscall;
-
 /// 功能：将内存中缓冲区中的数据写入文件。
 /// 参数：`fd` 表示待写入文件的文件描述符；
 ///      `buf` 表示内存中缓冲区的起始地址；
@@ -70,4 +70,14 @@ pub fn write(fd: usize, buffer: &[u8]) -> isize
 pub fn exit(exit_code: i32) -> isize
 {
     syscall(SYSCALL_EXIT, [exit_code as usize, 0, 0])
+}
+
+/// 功能：打印任务信息
+/// 参数：`` 表示应用程序的返回值。
+/// 返回值：该系统调用返回0表示成功，-1表示失败
+/// syscall ID：94
+#[inline(always)]
+pub fn sys_get_taskinfo(task_id: usize) -> isize
+{
+    syscall(SYSCALL_GET_TASKINFO, [task_id as usize, 0, 0])
 }

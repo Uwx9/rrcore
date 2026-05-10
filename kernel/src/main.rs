@@ -9,6 +9,7 @@ mod batch;
 mod trap;
 mod sync;
 mod syscall;
+mod tool;
 
 use core::arch::global_asm;
 

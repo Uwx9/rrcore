@@ -56,9 +56,9 @@ static USER_STACK: UserStack = UserStack {data: [0; USER_STACK_SIZE]};
 static KERNEL_STACK: KernelStack = KernelStack {data: [0; USER_STACK_SIZE]};
 
 
-static APP_MANAGER: sync::up::UPSafeCell<Option<AppManager>> = unsafe { sync::up::UPSafeCell::new(None) };
+pub static APP_MANAGER: sync::up::UPSafeCell<Option<AppManager>> = unsafe { sync::up::UPSafeCell::new(None) };
 
-struct AppManager {
+pub struct AppManager {
     app_num: usize,
     current_app: usize,
     app_start: [usize; MAX_APP_NUM],
@@ -66,10 +66,28 @@ struct AppManager {
 }
 
 impl AppManager {
+    pub fn get_app_num(&self) -> usize
+    {
+        self.app_num
+    }
+
     pub fn get_current_app(&self) -> usize
     {
         self.current_app
     }
+
+    pub fn print_app_info_specify(&self, task_id: usize)
+    {
+        if task_id >= self.get_app_num() {
+            panic!("no this app, id{}", task_id);
+        }
+        let app_start = self.app_start[task_id];
+        let app_end = self.app_end[task_id];
+        println!("app_id: {}", task_id);
+        println!("app_start: {}", app_start);
+        println!("app_end: {}", app_end);
+    }
+
 
     pub fn print_app_info(&self)
     {

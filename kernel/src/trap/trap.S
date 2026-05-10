@@ -26,7 +26,7 @@ __alltraps:
         .set n, n+1
     .endr
     # we can use t0/t1/t2 freely, because they were saved on kernel stack
-    csrr t0, sstatus
+    csrr t0, sstatus    // SPP = Previous Privilege Mode, 此时spp保存了trap之前的特权级
     csrr t1, sepc
     sd t0, 32*8(sp)
     sd t1, 33*8(sp)

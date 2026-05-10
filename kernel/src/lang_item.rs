@@ -7,8 +7,10 @@
 use core::panic::PanicInfo;
 use crate::sbi::shutdown;
 use crate::println;
+use crate::tool;
 
-#[panic_handler]    // 使用panic函数来对接panic！宏
+/// 使用panic函数来对接panic！宏
+#[panic_handler]   
 fn panic(panic_info: &PanicInfo) -> ! 
 {
     if let Some(location) = panic_info.location() {
@@ -20,6 +22,10 @@ fn panic(panic_info: &PanicInfo) -> !
             );
     } else {
         println!("Panicked: {}", panic_info.message())
+    }
+
+    unsafe {
+        tool::print_stack_trace();
     }
     shutdown(true);
 }
